@@ -1,0 +1,21 @@
+{
+  "name": "robot_ctrl.node",
+  "version": "0.1.0",
+  "description": "Robot Remote Control",
+  "main": "robot_ctrl.js",
+  "author":"Dominik Egger",
+  "devDependencies": {
+    "express": "3.x.x",
+    "connect-flash": "0.1.x",
+    "ejs": ">= 0.0.0",
+    "ejs-locals": ">= 0.0.0",
+    "passport": ">= 0.0.0",
+    "passport-local": ">= 0.0.0",
+    "mongodb": ">= 0.0.0",
+    "mongoose": ">= 0.0.0",
+    "bcrypt": ">= 0.0.0",
+    "angular": ">= 0.0.0",
+    "util": ">= 0.0.0"
+  },
+  "contributors": []
+}

@@ -1,0 +1,61 @@
+<div class="bs-docs-section">
+	<div class="page-header">
+		<div class="tabbable">
+			<h1 id="internet">Internet</h1>
+			<p class="lead">Change here the settings of your internet connection.</p>
+			<ul class="nav nav-tabs">
+				<li class="active"><a href="#internet_tab_1" data-toggle="tab">Networks</a></li>
+				<li><a href="#internet_tab_2" data-toggle="tab">...</a></li>
+				<li><a href="#internet_tab_3" data-toggle="tab">...</a></li>
+			</ul>
+			<div class="tab-content">
+				<div ng-controller="InternetCtrl" class="tab-pane active" id="internet_tab_1">
+					<h4> Available Networks </h4>
+					<span class="span8">
+						<button class="btn btn-sm btn-primary" ng-click="scanNetworks()">List Networks</button>
+						<button class="btn btn-sm btn-primary" ng-click="clear()">Clear</button>
+					</span>
+					<span ng-show="success">
+						<div class="alert alert-success">
+							Operation succeeded!
+						</div>
+					</span>
+					<span ng-show="failure">
+						<div class="alert alert-danger">
+							Operation failed!
+						</div>
+					</span>
+
+					<div class="list-group">
+						<a ng-repeat="n in networks" class="list-group-item" href ng-click="select(n)">
+							{{n}}
+						</a>
+					</div>
+					<pre>networks: {{networks}}</pre>
+				</div>
+				<div class="tab-pane" id="internet_tab_2">
+					<div class="panel panel-default">
+						<!-- Default panel contents -->
+						<div class="panel-heading">Available Networks</div>
+						<div class="panel-body">
+							<p>Select a network</p>
+						</div>
+
+						<ul class="list-group">
+							<a href="#1" class="list-group-item">Item 1</a>
+							<a href="#2" class="list-group-item">Item 2</a>
+							<a href="#3" class="list-group-item">Item 3</a>
+							<a href="#4" class="list-group-item">Item 4</a>
+							<a href="#5" class="list-group-item">Item 5</a>
+						</ul>
+					</div>
+
+				</div>
+				<div class="tab-pane" id="internet_tab_3">
+					<p>You are watching section 3.</p>  
+
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,49 @@
+<div class="bs-docs-section">
+	<div class="page-header">
+		<h1 id="account">Account</h1>
+		<p class="lead">Change your administrator password</p>
+
+		<p>
+  			<div ng-controller="AccountCtrl">
+				<form class="form-horizontal" id="passwordForm" role="form" ng-submit="submit()">
+					<div class="form-group">
+						<label class="col-lg-3 control-label" for="old_password">Old Password:</label>
+						<div class="col-lg-6">
+							<input type="password" id="old_password" class="form-control" placeholder="Old Password" ng-model="account.old_pwd" required>
+						</div>
+					</div>
+					<div class="form-group" id="new_password_grp">
+						<label class="col-lg-3 control-label" for="new_password">New Password:</label>
+						<div class="col-lg-6">
+							<input type="password" id="new_password" class="form-control" placeholder="New Password" ng-model="account.new_pwd" required>
+						</div>
+					</div>
+					<div class="form-group" id="confirm_password_grp">
+						<label class="col-lg-3 control-label" for="confirm_password">Confirm Password:</label>
+						<div class="col-lg-6">
+							<input type="password" id="confirm_password" class="form-control" placeholder="Confirm Password" ng-model="account.confirm_pwd" required>
+						</div>
+					</div>
+					<div class="form-group">
+						<div class="col-lg-6">
+							<button type="submit" class="btn btn-primary btn-large">Save</button>
+						</div>
+					</div>
+    				<!-- <pre>account = {{account | json}}</pre> -->
+					<span ng-show="save">
+						<div class="alert alert-success">
+							Password changed successfully.
+						</div>
+					</span>
+					<span ng-show="failure">
+						<div class="alert alert-danger">
+							<strong>Error!</strong> {{message}}
+						</div>
+					</span>
+				</form>
+			</div>
+
+		</p>
+
+	</div>
+</div>
