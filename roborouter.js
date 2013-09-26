@@ -15,6 +15,19 @@ var express = require('express')
 // 	console.log('Connected to DB');
 // });
 
+// First, checks if it isn't implemented yet.
+if (!String.prototype.format) {
+  String.prototype.format = function() {
+    var args = arguments;
+    return this.replace(/{(\d+)}/g, function(match, number) { 
+      return typeof args[number] != 'undefined'
+        ? args[number]
+        : match
+      ;
+    });
+  };
+}
+
 var app = express();
 
 // configure Express
@@ -55,7 +68,7 @@ app.configure(function() {
 // 	} else if (req.isAuthenticated()) {
 // 		return next();
 // 	} else {
-// 		return res.errorirect('/login');
+// 		return res.redirect('/login');
 // 	}
 // });
 
@@ -94,7 +107,7 @@ app.get('/account', ensureAuthenticated, function(req, res){
 app.post('/login', 
 	passport.authenticate('local', { failureRedirect: '/login', failureFlash: true }),
 	function(req, res) {
-		res.errorirect('/');
+		res.redirect('/');
 	});
 */
 	
@@ -106,22 +119,22 @@ app.post('/login', function(req, res, next) {
 		if (err) { return next(err) }
 		if (!user) {
 			req.session.messages =  [info.message];
-			return res.errorirect('/login')
+			return res.redirect('/login')
 		}
 		req.logIn(user, function(err) {
 			if (err) { return next(err); }
-			return res.errorirect('/home');
+			return res.redirect('/home');
 		});
 	})(req, res, next);
 });
 
 // app.get('/', function(req, res) {
-// 	res.errorirect('/home');
+// 	res.redirect('/home');
 // });
 
 app.get('/logout', function(req, res){
 	req.logout();
-	res.errorirect('/');
+	res.redirect('/');
 });
 
 app.listen(3000, function() {
@@ -136,7 +149,7 @@ app.listen(3000, function() {
 //   login page.
 // function ensureAuthenticated(req, res, next) {
 //   if (req.isAuthenticated()) { return next(); }
-//   res.errorirect('/login.html')
+//   res.redirect('/login.html')
 // }
 
 // User Schema
@@ -330,7 +343,7 @@ app.post('/save_pwd', function(req, res, next) {
 			}
 		});
 	} else {
-		console.log("password mismatch".error);
+		console.log("password mismatch".red);
 		res.send({ success: false, mismatch: true, message: "Confirmation mismatch"});
 	};
 });
@@ -339,11 +352,15 @@ var util	= require('util'),
 	exec	= require('child_process').exec,
 	child;
 
+
+var mainInterface = 'eth0';
+
 // for now fixed to wlan0, the RasPi won't be able to handle more
 // than one wlan interface anyway, but theoretically this could
 // be made changable parameter too
-var wlan_interface = 'wlan1'
-var wpa_cli_cmd = 'wpa_cli -i' + wlan_interface + ' ';
+var robotInterface = 'wlan1';
+
+var wpa_cli_cmd = 'wpa_cli -i' + robotInterface + ' ';
 
 var command, result;
 executeCommand = function(command, cb) {
@@ -355,11 +372,11 @@ executeCommand = function(command, cb) {
 			return cb(error, stderr);
 		}
 		// console.log('ready')
-		if (stdout.match('FAIL')) {
-			return cb(null, '');
-		} else {
-			return cb(null, stdout);
-		}
+		// if (stdout.match('FAIL')) {
+		// 	return cb(null, '');
+		// } else {
+		return cb(null, stdout);
+		// }
 	});
 	// console.log('done')
 }
@@ -372,7 +389,7 @@ executeCommand = function(command, cb) {
 //  .. sort them by name
 //  .. and only print unique results
 // var command = 'sudo iwlist wlan1 scan | grep SSID | cut -d: -f2 | sort | uniq';
-// var command = "wpa_cli -i' + wlan_interface + ' scan_results | awk '/\[/{print $5}' | sort | uniq"
+// var command = "wpa_cli -i' + robotInterface + ' scan_results | awk '/\[/{print $5}' | sort | uniq"
 
 // scanNetworks = function(cb) {
 // 	console.log("search networks");
@@ -389,7 +406,7 @@ executeCommand = function(command, cb) {
 // 				// .. use only the column 5 (which corresponds to the ssid)
 // 				// .. sort it
 // 				// .. and print only unique results
-// 				command = "wpa_cli -i" + wlan_interface + " scan_results | awk -F'\\t' '/\\[/{print $5\";\"$4}' | sort | uniq";
+// 				command = "wpa_cli -i" + robotInterface + " scan_results | awk -F'\\t' '/\\[/{print $5\";\"$4}' | sort | uniq";
 // 				// child = exec(command, function(error, stdout, stderr) {
 // 				// 	console.log('stdout:' + stdout);
 // 				// 	console.log('stderr:' + stderr);
@@ -445,8 +462,8 @@ executeCommand = function(command, cb) {
 //  .. sort them by name
 //  .. and only print unique results
 // var command = 'sudo iwlist wlan1 scan | grep SSID | cut -d: -f2 | sort | uniq';
-// var command = "wpa_cli -i' + wlan_interface + ' scan_results | awk '/\[/{print $5}' | sort | uniq"
-// var command = "wpa_cli -i" + wlan_interface + " scan_results | awk -F'\\t' '/\\[/{print $5\";\"$4}' | sort | uniq";
+// var command = "wpa_cli -i' + robotInterface + ' scan_results | awk '/\[/{print $5}' | sort | uniq"
+// var command = "wpa_cli -i" + robotInterface + " scan_results | awk -F'\\t' '/\\[/{print $5\";\"$4}' | sort | uniq";
 
 scanNetworks = function(cb) {
 	console.log("scan networks".yellow);
@@ -468,7 +485,7 @@ scanNetworks = function(cb) {
 			// .. use only the columns 4 and 5 (which corresponds to the ssid and security level)
 			// .. sort it
 			// .. and print only unique results
-			command = "wpa_cli -i" + wlan_interface + " scan_results | awk -F'\\t' '/\\[/{print $5\";\"$4}' | sort | uniq";
+			command = "wpa_cli -i" + robotInterface + " scan_results | awk -F'\\t' '/\\[/{print $5\";\"$4}' | sort | uniq";
 			break;
 		case 3:
 			var list = res.replace(/\"/g, "").split("\n")
@@ -593,6 +610,7 @@ addNetwork = function(network, cb) {
 	console.log("adding network".yellow, network);
 
 	var res;
+	var set_network_cmd;
 
 	recursive = function(cb, step) {
 		console.log("step", step);
@@ -605,15 +623,31 @@ addNetwork = function(network, cb) {
 			break;
 		case 2:
 			network.id = res.match(/^[0-9]/)[0];
-			command = wpa_cli_cmd + ' set_network ' + network.id + ' ssid \'\"' + network.ssid + '\"\'';
+			set_network_cmd = wpa_cli_cmd + 'set_network ' + network.id;
+			command = set_network_cmd + ' ssid \'\"' + network.ssid + '\"\'';
 			break;
 		case 3:
 			if (network.psk) {
-				command = wpa_cli_cmd + ' set_network ' + network.id + ' psk \'\"' + network.psk + '\"\'';
+				command = set_network_cmd + ' psk \'\"' + network.psk + '\"\'';
 			} else {
-				command = wpa_cli_cmd + ' set_network ' + network.id + ' key_mgmt NONE';
+				command = set_network_cmd + ' key_mgmt NONE';
 			}
 			break;
+		case 4:
+			// set id_str
+			command = set_network_cmd + ' id_str \'\"' + network.id_str + '\"\'';
+			break;
+		case 5:
+			addNetworkToInterfaces(network, function(err, result) {
+				if (err) {
+					return cb(err, result);
+				} else {
+					network.routes = result.routes;
+					return recursive(cb, ++step);
+				}
+			})
+			// next step will be executed when addNetworkToInterfaces succeeds
+			return;
 		// case 4:
 		// 	command = wpa_cli_cmd + ' select_network ' + network.id;
 		// 	break;
@@ -711,6 +745,7 @@ addAdhoc = function(network, cb) {
 	console.log("adding adhoc network".yellow, network);
 
 	var res;
+	var set_network_cmd;
 
 	recursive = function(cb, step) {
 		console.log("step", step);
@@ -722,25 +757,41 @@ addAdhoc = function(network, cb) {
 			command = wpa_cli_cmd + ' add_network';
 			break;
 		case 2:
-			network.id = res.match(/^[0-9]/)[0];
-			command = wpa_cli_cmd + ' set_network ' + network.id + ' ssid \'\"' + network.ssid + '\"\'';
+			network.id = res.match(/^[0-9]/)[1];
+			set_network_cmd = wpa_cli_cmd + 'set_network ' + network.id;
+			command = set_network_cmd + ' ssid \'\"' + network.ssid + '\"\'';
 			break;
 		case 3:
-			command = wpa_cli_cmd + ' set_network ' + network.id + ' mode 1';
+			command = set_network_cmd + ' mode 1';
 			break;
 		case 4:
 			if (network.psk) {
-				command = wpa_cli_cmd + ' set_network ' + network.id + ' wep_key0 ' + network.psk;
+				command = set_network_cmd + ' wep_key0 ' + network.psk;
 				// with key, we also need to set the keyidx to be used in the next step
 			} else {
-				command = wpa_cli_cmd + ' set_network ' + network.id + ' key_mgmt NONE';
+				command = set_network_cmd + ' key_mgmt NONE';
 				// without key we can skip the next step
 				++step;
 			}
 			break;
 		case 5:
-			command = wpa_cli_cmd + ' set_network ' + network.id + ' wep_tx_keyidx 0';
+			command = set_network_cmd + ' wep_tx_keyidx 0';
 			break;
+		case 6:
+			// set id_str
+			command = set_network_cmd + ' id_str \'\"' + network.id_str + '\"\'';
+			break;
+		case 7:
+			addNetworkToInterfaces(network, function(err, result) {
+				if (err) {
+					return cb(err, result);
+				} else {
+					network.routes = result.routes;
+					return recursive(cb, ++step);
+				}
+			})
+			// next step will be executed when addNetworkToInterfaces succeeds
+			return;
 		// case 6:
 		// 	command = wpa_cli_cmd + ' select_network ' + network.id;
 		// 	break;
@@ -770,8 +821,11 @@ selectNetwork = function(network_id, cb) {
 		if (err) {
 			return cb(err, result)
 		} else {
-			res = result;
-			return cb(null, null);
+			if (result.match('FAIL')) {
+				return cb("error", "failed to select network " + network_id);
+			} else {
+				return cb(null, null);
+			}
 		}
 	});
 
@@ -784,8 +838,19 @@ saveConfig = function(cb) {
 		if (err) {
 			return cb(err, result)
 		} else {
-			res = result;
-			return cb(null, null);
+			if (result.match('FAIL')) {
+				console.log("Error: failed to save config".red);
+				// return cb("error", "failed to save config");
+			// } else {
+				// also save interfaces file
+				saveInterfaces(function(err, result) {
+					if (err) {
+						return cb(err, result)
+					} else {
+						return cb(null, null);
+					}
+				});
+			}
 		}
 	});
 }
@@ -858,10 +923,14 @@ listNetworks = function(cb) {
 		case 3:
 			console.log("got id_str");
 			if (index < networks.length) {
-				res = res.replace(/\"/g, "")
-				console.log("res:", res);
-				networks[index].id_str = res;
-				
+				if (res.match('FAIL')) {
+					// if FAIL is return, most likely no id_str was assigned
+					networks[index].id_str = '';
+				} else {
+					res = res.replace(/\"/g, "") 
+					console.log("res:", res);
+					networks[index].id_str = res;
+				}
 			}
 			++step;
 			// no break, continue with step 4
@@ -930,8 +999,11 @@ removeNetwork = function(network_id, cb) {
 		if (err) {
 			return cb(err, result)
 		} else {
-			res = result;
-			return cb(null, null);
+			if (result == "FAIL") {
+				return cb("error", "failed to remove network");
+			} else {
+				return cb(null, null);
+			}
 		}
 	});
 }
@@ -961,15 +1033,22 @@ editNetwork = function(network, cb) {
 			break;
 		case 2:
 			// add routes to interfaces
-			if (network.routes.length != 0) {
-				var interfaces_network = getInterfacesNetwork(network.id_str);
-				if (interfaces_network != null) {
-					interfaces_network.routes = network.routes;
+			addRoutesToInterfaces(network, function(err, result) {
+				if (err) {
+					cb(err, result);
 				} else {
-					// initialise routes for interfaces network
+					return recursive(cb, ++step);
 				}
-			}
-			++step;
+			});
+			// if (network.routes.length != 0) {
+			// 	var interfaces_network = getInterfacesNetwork(network.id_str);
+			// 	if (interfaces_network != null) {
+			// 		interfaces_network.routes = network.routes;
+			// 	} else {
+			// 		// initialise routes for interfaces network
+			// 	}
+			// }
+			return;
 			// no break, continue with next step
 		default:
 			// finished
@@ -980,8 +1059,11 @@ editNetwork = function(network, cb) {
 			if (err) {
 				return cb(err, result)
 			} else {
-				res = result;
-				return recursive(cb, ++step);
+				if (result == 'FAIL') {
+					return cb("error", "failed to execute command: " + command);
+				} else {
+					return recursive(cb, ++step);
+				}
 			}
 		});
 	}
@@ -993,7 +1075,7 @@ app.post('/network_scan', function(req, res, next) {
 
 	scanNetworks(function(err, result) {
 		if (err) {
-			console.log("Error:".error, err);
+			console.log("Error:".red, err);
 			res.send({ success: false, message: result});
 		} else {
 			console.log("Scan result:".green, result);
@@ -1011,10 +1093,10 @@ app.post('/network_stop', function(req, res, next) {
 app.post('/network_add', function(req, res, next) {
 	callback = function(err, result) {
 		if (err) {
-			console.log("Error:".error, result);
+			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
 		} else {
-			console.log("Successfully added network ".green + network.ssid);
+			console.log("Successfully added network:".green, network);
 			res.send({ success: true, network: result});
 		}
 	};
@@ -1032,7 +1114,7 @@ app.post('/network_select', function(req, res, next) {
 
 	selectNetwork(network.id, function(err, msg) {
 		if (err) {
-			console.log("Error:".error, msg);
+			console.log("Error:".red, msg);
 			res.send({ success: false, message: msg});
 		} else {
 			console.log("Network ".green + network.ssid + " selected".green);
@@ -1045,7 +1127,7 @@ app.post('/network_list', function(req, res, next) {
 	
 	listNetworks(function(err, result) {
 		if (err) {
-			console.log("Error:".error, result);
+			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
 		} else {
 			console.log("List result:".green, result);
@@ -1059,7 +1141,7 @@ app.post('/network_remove', function(req, res, next) {
 	
 	removeNetwork(network.id, function(err, result) {
 		if (err) {
-			console.log("Error:".error, result);
+			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
 		} else {
 			console.log("Network ".green + network.ssid + " removed".green);
@@ -1073,7 +1155,7 @@ app.post('/network_edit', function(req, res, next) {
 	
 	editNetwork(network, function(err, result) {
 		if (err) {
-			console.log("Error:".error, result);
+			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
 		} else {
 			console.log("Network ".green + network.ssid + " edited".green);
@@ -1086,13 +1168,14 @@ app.post('/network_saveconfig', function(req, res, next) {
 	
 	saveConfig(function(err, result) {
 		if (err) {
-			console.log("Error:".error, result);
+			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
 		} else {
 			console.log("Config saved".green);
 			res.send({ success: true});
 		}
 	});
+
 });
 
 app.post('/network_info', function(req, res, next) {
@@ -1100,7 +1183,7 @@ app.post('/network_info', function(req, res, next) {
 	var network = req.body;
 	getNetworkInfo(network.id, function(err, result) {
 		if (err) {
-			console.log("Error:".error, result);
+			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
 		} else {
 			console.log("Info ok".green);
@@ -1112,21 +1195,12 @@ app.post('/network_info', function(req, res, next) {
 
 var fs = require('fs');
 
+var INTERFACES_FILE = '/data/ws_nodejs/roborouter/assets/interfaces';
 loadInterfaces = function(cb) {
 	// fs.readFile('/etc/network/interfaces', 'utf8', function(err, data) {
-	fs.readFile('/data/ws_nodejs/roborouter/assets/interfaces', 'utf8', function(err, data) {
+	fs.readFile(INTERFACES_FILE, 'utf8', function(err, result) {
 		if (err) {
-			cb(err, err);
-		} else {
-			cb(null, data);
-		}
-	});
-}
-
-loadRoutes = function(cb) {
-	loadInterfaces(function(err, result) {
-		if (err) {
-			console.log("Error:".error, err);
+			console.log("Error:".red, err);
 			cb(err, result);
 		} else {
 			// console.log("File Content:", result);
@@ -1164,6 +1238,14 @@ loadRoutes = function(cb) {
 			}
 			// console.log("Parsed:", arr)
 
+			// in the next step we parse the routes and additional settings, which is a list of
+			// strings seperated by newlines. 
+			// we separate the settings from the routes, where a route starts with the keyword 'up'
+			// the routes are then parsed to obtain the source port, destination port and destination
+			// address
+
+			// this regex strips the leading whitespaces and then matches everythin until the first newline
+			// the global and multiline modifiers make it possible to obtain all possible matches.
 			regex = /(?:^\s*(.+)\n*)/gm
 			for (var i = 0; i < arr.length; ++i) {
 				match = regex.exec(arr[i].settings);
@@ -1178,12 +1260,15 @@ loadRoutes = function(cb) {
 					match = regex.exec(arr[i].settings);
 				}
 				arr[i].settings = settings;
+				// the routes_raw contains the routes as they are written in the interfaces file
+				// but also the pre-setup for the routes to work
 				arr[i].routes_raw = routes;
 
 				var routes = [];
 				for (var j = 0; j < arr[i].routes_raw.length; ++j) {
 					var route_raw = arr[i].routes_raw[j];
 					var matches;
+					// this regex gets the source port, the address and the destination port
 					var route_regex = /.*--dport (\d*).*--to-destination ((?:\d+\.){3}\d+):(\d+)/
 					if ((matches = route_raw.match(route_regex)) != null) {
 						// console.log("matches", matches);
@@ -1193,6 +1278,8 @@ loadRoutes = function(cb) {
 						routes.push(route);
 					}
 				}
+				// the routes contain the source port, destination port and destination address
+				// which will be displayed on the client
 				arr[i].routes = routes;
 				// console.log("route:", arr[i].routes);
 			}
@@ -1203,10 +1290,74 @@ loadRoutes = function(cb) {
 	});
 }
 
+saveInterfaces = function(cb) {
+	// first we need to stringify the interfaces array
+
+	if (!interfacesIsModified) {
+		// if interfaces file is not modified we don't have to
+		// save it again, just exit
+		return cb(null, null);
+	}
+
+	command = 'cp {0} {0}.bak'.format(INTERFACES_FILE)
+	executeCommand(command, function(err, result) {
+		if (err) {
+			console.log("Error: failed to backup interfaces".red);
+		} else {
+
+			var interfaces_string = "";
+			for (var i in interfaces) {
+				var stanza = interfaces[i];
+				var stanza_str = "";
+
+				// if (stanza.type.match(/auto|allow-hotplug/)) {
+				// 	stanza_str = "{0} {1}".format(stanza.type, stanza.name);
+				// } else {
+					stanza_str = "{0} {1} {2}\n".format(stanza.type, stanza.name, stanza.method);
+
+					var stanza_settings_str = "";
+					var stanza_routes_str = "";
+
+					if (stanza.settings.length != 0) {
+						stanza_settings_str = "  " + stanza.settings.toString().replace(/,/g,"\n  ");
+						stanza_str = stanza_str.concat(stanza_settings_str, "\n");
+					}
+
+					if (stanza.routes_raw.length != 0) {
+						if (stanza_settings_str != "") {
+							stanza_str = stanza_str.concat("\n");
+						}
+
+						stanza_routes_str = "  " + stanza.routes_raw.toString().replace(/,/g,"\n  ");
+						stanza_str = stanza_str.concat(stanza_routes_str, "\n");
+					}
+				// }
+			
+				interfaces_string = interfaces_string.concat(stanza_str, "\n");
+			}
+
+			console.log("saving interfaces:", interfaces_string);
+			fs.writeFile(INTERFACES_FILE, interfaces_string, 'utf8', function(err) {
+				if (err) {
+					return cb(err, err);
+				} else {
+					console.log("interfaces saved".green);
+					interfacesIsModified = false;
+					return cb(null, null);
+				}
+			});
+		}
+	});
+
+}
+
+// on startup, read the file /etc/network/interfaces and store
+// it the variable interfaces, each element of the array will
+// be a stanza of the interfaces file.
 var interfaces;
-loadRoutes(function(error, result) {
+loadInterfaces(function(error, result) {
 	if (error) {
-		console.log("Error reading interfaces:".error, result);
+		console.log("Error reading interfaces:".red, result);
 	} else {
 		interfaces = result;
 		console.log("interfaces read Successfully:\n".green, interfaces);
@@ -1214,9 +1365,11 @@ loadRoutes(function(error, result) {
 });
 
 getInterfacesNetwork = function(id_str) {
-	for (var i = 0; i < interfaces.length; ++i) {
-		if (interfaces[i].name == id_str) {
-			return interfaces[i];
+	if (id_str != '') {
+		for (var i = 0; i < interfaces.length; ++i) {
+			if (interfaces[i].name == id_str) {
+				return interfaces[i];
+			}
 		}
 	}
 	return null;
@@ -1235,3 +1388,286 @@ app.post('/interfaces', function(req, res, next) {
 	});
 
 });
+
+getIpRange = function(iface, cb) {
+	console.log("get ip range".yellow);
+
+	var ipRange;
+	var res;
+	recursive = function(cb, step) {
+		console.log("step", step);
+		switch(step) {
+		case 0:
+			// first check the config and obtain the line with the address
+			command = 'ifconfig ' + iface + ' | grep \'inet addr:\'';
+			break;
+		case 1:
+			// then parse the string to get the address, we only care about the
+			// first 3 parts which define the ip range
+			var regex = /inet addr:((?:\d+\.){2}\d+)\.\d+/;
+			ipRange = res.match(regex)[1];
+			console.log("iface:", iface, "ipRange:", ipRange);
+			++step;
+			// no break, continue with next step
+		default:
+			// finished
+			return cb(null, ipRange);
+		}
+
+		executeCommand(command, function(err, result) {
+			if (err) {
+				return cb(err, result)
+			} else {
+				res = result;
+				return recursive(cb, ++step);
+			}
+		});
+	}
+
+	recursive(cb, 0);
+}
+
+compareIpRange = function(network, cb) {
+	console.log("compare ip range".yellow);
+
+	getIpRange(mainInterface, function(err, result) {
+		if (err) {
+			return cb(err, result);
+		} else {
+			var mainIpRange = result;
+
+			var regex = /((?:\d+\.){2}\d+)\.\d+/;
+			var robotIpRange = network.routes[0].target.match(regex)[1];
+			console.log("robot ipRange:", robotIpRange);
+
+			// if (robotIpRange == mainIpRange) {
+			// 	console.log("IP's are the same");
+			// } else {
+				console.log("IP's are" + (robotIpRange != mainIpRange ? " not" : "") + " the same");
+			// }
+			cb(null, robotIpRange == mainIpRange);
+		}
+	});
+}
+
+// initializeRouteSetup = function(network, cb) {
+// 	console.log("initialize route setup".yellow);
+
+// 	compareIpRange(network, function(err, result) {
+// 		if (err) {
+// 			return cb(err, result);
+// 		} else {
+// 			var routes_raw = [];
+// 			var elem;
+// 			if (result) {
+// 				// if they have the same ip range, we have to add some additional
+// 				// route setup, to make sure that packages are going out on the
+// 				// correct interface. if we didn't do this, then packages would go
+// 				// out on the main interface, instead of the robot's interface
+// 				// note: we use the 200 + netwrok id as table and fwmark
+// 				var fwmark = parseInt(200 + Number(network.id));
+
+// 				// first step is to flush the table (to remove possibly obsolete entries)
+// 				elem = 'up ip route flush table ' + fwmark;
+// 				routes_raw.push(elem);
+
+// 				// then we add the fwmark and table to the ip rules
+// 				elem = 'up ip rule add fwmark ' + fwmark + ' table ' + fwmark;
+// 				routes_raw.push(elem);
+
+// 				// next we define the robot's interface as default outgoing interface
+// 				// for all routes marked with this fwmark
+// 				elem = 'up ip route add default dev ' + robotInterface + ' table ' + fwmark;
+// 				routes_raw.push(elem);
+
+// 				// last we flush the cache to make sure everything is writen int he ip rules
+// 				elem = 'up ip route flush cache';
+// 				routes_raw.push(elem);
+// 			} else {
+// 				// if they don't have the same ip range, then we don't need to do
+// 				// any setup. packages will automatically go out on the correct
+// 				// interface
+// 			}
+
+// 			return cb(null, routes_raw);
+// 		}
+// 	});
+// }
+
+createNewStanza = function(network) {
+	if (network.id_str == "") {
+		return null;
+	} else {
+		// first thing to do is add a new stanza for the robot
+		var stanza = { 
+			type: 'iface', // type is iface
+			name: network.id_str, // the name is the id_str used for the network
+			method: 'inet dhcp', // ip address will be obtained from dhcp (robot)
+			settings: [],
+			routes_raw: [],
+			routes: []
+		};
+
+		return stanza;
+	}
+}
+
+addNetworkToInterfaces = function(network, cb) {
+	console.log("add new network to interfaces".yellow);
+
+	// first check if there is already a stanza in the interfaces,
+	// if not 
+	var stanza = getInterfacesNetwork(network.id_str);
+	if (stanza == null) {
+		if (network.id_str == "") {
+			console.log("network.id_str empty".red);
+			return cb("error", "can't create stanza without id_str");
+		}
+
+		// then create a new one
+		stanza = createNewStanza(network);
+
+		// and add it to the interfaces
+		interfaces.push(stanza);
+		interfacesIsModified = true;
+
+		console.log("created stanza:".green, stanza);
+
+		return cb(null, stanza);
+	} else {
+		// otherwise there is nothing to do
+		console.log("network already exists in interfaces".red);
+		return cb(null, stanza);
+	}
+}
+
+// flag to check if interfaces file should be saved when config is saved
+var interfacesIsModified = false;
+
+addRoutesToInterfaces = function(network, cb) {
+	console.log("add routes to interfaces".yellow);
+
+	if (network.routes.length == 0) {
+		console.log("nothing to add");
+		return cb(null, "nothing to add");
+	}
+
+	addRoutes = function(stanza, network) {
+		console.log("add Routes".yellow);
+
+		stanza.routes = network.routes;
+
+		// now check if the ip range is the same
+		compareIpRange(network, function(err, result) {
+			if (err) {
+				return cb(err, result);
+			} else {
+
+				var route;
+				var elem;
+				var fwmark;
+
+				// initialize the routes_raw
+				stanza.routes_raw = [];
+
+				if (result) {
+					// if the networks have the same ip range, we have to add some additional
+					// route setup, to make sure that packages are going out on the
+					// correct interface. if we didn't do this, then packages would go
+					// out on the main interface, instead of the robot's interface
+					// note: we use the 200 + netwrok id as table and fwmark
+					fwmark = parseInt(200 + Number(network.id));
+
+					// first step is to flush the table (to remove possibly obsolete entries)
+					elem = 'up ip route flush table ' + fwmark;
+					stanza.routes_raw.push(elem);
+
+					// then we add the fwmark and table to the ip rules
+					elem = 'up ip rule add fwmark ' + fwmark + ' table ' + fwmark;
+					stanza.routes_raw.push(elem);
+
+					// next we define the robot's interface as default outgoing interface
+					// for all routes marked with this fwmark
+					elem = 'up ip route add default dev ' + robotInterface + ' table ' + fwmark;
+					stanza.routes_raw.push(elem);
+
+					// last we flush the cache to make sure everything is writen int he ip rules
+					elem = 'up ip route flush cache';
+					stanza.routes_raw.push(elem);
+				} else {
+					// if they don't have the same ip range, then we don't need to do
+					// any setup. packages will automatically go out on the correct
+					// interface
+				}
+
+				// then for every route do ...
+				for (var i in stanza.routes) {
+					route = stanza.routes[i];
+
+					// if the ip range is the same we need to
+					// add an additional entry
+					if (result) {
+
+						// this will give any package coming in on the source Port the fwmark used by the robot so that
+						// it can afterwards be forwarded to the correct interface
+						// dport is the port where the roborouter is receiving the messages
+						elem = 'up iptables -A PREROUTING -i eth0 -t mangle -p tcp --dport ' + route.srcPort + ' -j MARK --set-mark ' + fwmark
+						stanza.routes_raw.push(elem);
+					}
+
+					// this will reroute packages coming in on the source port, with destination roborouter to the
+					// destination port and address of the robot
+					elem = 'up iptables -t nat -A PREROUTING -i eth0 -p tcp --dport ' + route.srcPort 
+							+ ' -j DNAT --to-destination ' + route.target + ':' + route.dstPort;
+					stanza.routes_raw.push(elem);
+
+				}
+				
+				interfacesIsModified = true;
+
+				return cb(null, stanza.routes_raw);
+			}
+		});
+	}
+
+	// first check if there is already a stanza in the interfaces,
+	// if not, then create a new one
+	var stanza = getInterfacesNetwork(network.id_str);
+	if (stanza == null) {
+		console.log("can't add routes, stanza not found".red);
+		return cb("error", "can't add routes, stanza not found in interfaces");
+		// addNetworkToInterfaces(network, function(err, result) {
+		// 	if (err) {
+		// 		return cb(err, result);
+		// 	} else {
+		// 		stanza = result;
+		// 	}
+		// 	addRoutes(stanza, network);
+		// })
+	} else {
+		console.log("stanza found:".green, stanza);
+		// if we found one, add the routes
+		addRoutes(stanza, network);
+	}
+
+}
+
+// removeExistingRoutes = function(stanza) {
+// 	console.log("remove existing routes...".yellow);
+// 	if (stanza.routes.length != 0) {
+// 		// we remove all lines with iptable entries from the route information in the 
+// 		// routes_raw so that we can rewrite them again from the routes, avoiding multiple 
+// 		// occurences of the same route. at the same time we leave the lines that contain 
+// 		// pre-setup (not iptable information) as is.
+// 		var stripped_routes = [];
+// 		for (j in stanza.routes_raw) {
+// 			var route = stanza.routes_raw[j];
+// 			console.log("route:", route)
+// 			if (route.match(/iptables/) == null) {
+// 				stripped_routes.push(route);
+// 			}
+// 		}
+// 		stanza.routes_raw = stripped_routes;
+// 	}
+// 	console.log("stripped stanza:".green, stanza);
+// }

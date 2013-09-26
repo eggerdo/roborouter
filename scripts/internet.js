@@ -32,18 +32,18 @@ var OPEN 	= 0;
 	WEP 	= 1;
 	WPA 	= 2;
 
-setPristine = function(form){
-	if(form.$setPristine){//only supported from v1.1.x
-		form.$setPristine();
-	}else{
-		for (var i in form) {
-			var input = form[i];
-			if (input.$dirty) {
-				input.$dirty = false;
-			}
-		}
-	 }
- };
+// setPristine = function(form){
+// 	if(form.$setPristine){//only supported from v1.1.x
+// 		form.$setPristine();
+// 	}else{
+// 		for (var i in form) {
+// 			var input = form[i];
+// 			if (input.$dirty) {
+// 				input.$dirty = false;
+// 			}
+// 		}
+// 	 }
+//  };
 
 function InternetCtrl($scope, $http) {
 	$scope.success = false;
@@ -57,6 +57,7 @@ function InternetCtrl($scope, $http) {
 	$scope.route_edit = false;
 	$scope.route_modified = false;
 	$scope.settings_valid = false;
+	$scope.config_modified = false;
 
 	$scope.id_str_pattern = /^\S+$/;
 	$scope.ip_pattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
@@ -108,6 +109,7 @@ function InternetCtrl($scope, $http) {
 				}
 			} else {
 				$scope.failure = true;
+				$scope.message = response.message;
 			}
 		})
 	};
@@ -145,7 +147,7 @@ function InternetCtrl($scope, $http) {
 				$scope.networks.push(network);
 				$scope.edit(network);
 				$('#tab_edit').click();	
-				$scope.modified = true;
+				$scope.config_modified = true;
 			} else {
 				$scope.success = false;
 			}
@@ -181,6 +183,7 @@ function InternetCtrl($scope, $http) {
 			} else {
 				if (notify) {
 					$scope.failure = true;
+					$scope.message = response.message;
 				}
 			}
 		});
@@ -202,13 +205,15 @@ function InternetCtrl($scope, $http) {
 	$scope.saveConfig = function() {
 		console.log("saving config...");
 		$scope.reset();
-		$scope.modified = false;
+		// $scope.modified = false;
 
 		$http.post('/network_saveconfig').success(function(response) {
 			if (response.success) {
 				$scope.success = true;
+				$scope.config_modified = false;
 			} else {
 				$scope.failure = true;
+				$scope.message = response.message;
 			}
 		});
 	}
@@ -252,7 +257,7 @@ function InternetCtrl($scope, $http) {
 		}
 	}
 
-	$scope.saveChanges = function() {
+	$scope.applyNetworkChanges = function() {
 		// $scope.generalSettingsForm.$setPristine();
 
 		$scope.reset();
@@ -271,9 +276,11 @@ function InternetCtrl($scope, $http) {
 				angular.copy($scope.selected_network, $scope.old_network);
 				// $scope.success = true;
 				$scope.modified = false;
-				$scope.saveConfig();
+				$scope.config_modified = true;
+				// $scope.saveConfig();
 			} else {
 				$scope.failure = true;
+				$scope.message = response.message;
 			}
 		});
 	}
@@ -317,7 +324,7 @@ function InternetCtrl($scope, $http) {
 		$scope.route = {};
 		$scope.modified = true;
 
-		setPristine($scope.newRouteForm);
+		$scope.newRouteForm.$setPristine();
 	}
 
 	$scope.editRoute = function(route) {
@@ -325,16 +332,17 @@ function InternetCtrl($scope, $http) {
 		$scope.route = angular.copy(route);
 		$scope.route_edit = true;
 		$scope.route_modified = false;
+		$scope.modified = true;
 	}
 
-	$scope.saveRoute = function(route) {
+	$scope.applyRouteChanges = function(route) {
 		angular.copy(route, $scope.old_route);
 		$scope.route_edit = false;
 		$scope.route_modified = false;
 		$scope.route = {};
 	}
 
-	$scope.cancelRoute = function() {
+	$scope.cancelRouteChanges = function() {
 		$scope.route = {};
 		$scope.route_edit = false;
 		$scope.route_modified = false;

@@ -17,7 +17,7 @@
 							<p>Configured networks:</p>
 							<span class="span8">
 								<button class="btn btn-sm btn-primary" ng-click="listNetworks(true)">Refresh</button>
-								<!-- <button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="save()">Save Config</button> -->
+								<button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="saveConfig()">Save Config</button>
 							</span>
 							<span ng-show="success">
 								<div class="alert alert-success">
@@ -54,6 +54,7 @@
 						<div class="panel-body">
 							<span class="span8">
 								<button class="btn btn-sm btn-primary" ng-click="scanNetworks()">Refresh</button>
+								<button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="saveConfig()">Save Config</button>
 							</span>
 							<span ng-show="success">
 								<div class="alert alert-success">
@@ -98,6 +99,16 @@
 											</label>
 										</div>
 										<div class="form-group">
+											<label class="col-lg-3 control-label" for="identification" title="Identification for the robot's network. No spaces allowed!">Identification:</label>
+											<div class="col-lg-6">
+												<input class="form-control" type="text" name="identification" id="identification" placeholder="robot name" ng-model="n.id_str" ng-pattern="id_str_pattern" required>
+											</div>
+											<div class="text-danger" ng-show="addNetworkForm.identification.$dirty && addNetworkForm.identification.$invalid">
+												<span ng-show="addNetworkForm.identification.$error.required">Identification cannot be left blank</span>
+												<span ng-show="addNetworkForm.identification.$error.pattern">Identification cannot contain spaces</span>
+											</div>
+										</div>
+										<div class="form-group">
 											<div class="col-lg-3">
 												<button class="btn btn-sm btn-primary pull-right" value="Add" ng-click="add(n)" ng-disabled="addNetworkForm.$invalid">Add</button>
 											</div>
@@ -117,6 +128,9 @@
 						<!-- <div class="panel-heading">Available Networks</div> -->
 						<div class="panel-body">
 							<p>Select a network to start editing its settings</p>
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="saveConfig()">Save Config</button>
+							</span>
 						</div>
 							
 						<div class="list-group">
@@ -145,7 +159,8 @@
 							<span class="span8">
 								<button class="btn btn-sm btn-primary" ng-show="editing" ng-click="cancel()">Close</button>
 								<button class="btn btn-sm btn-primary" ng-show="editing && modified" ng-click="undo()">Undo</button>
-								<button class="btn btn-sm btn-primary" ng-show="editing && modified" ng-disabled="generalSettingsForm.$invalid" ng-click="saveChanges()">Save Changes</button>
+								<button class="btn btn-sm btn-primary" ng-show="editing && modified" ng-disabled="generalSettingsForm.$invalid" ng-click="applyNetworkChanges()">Apply</button>
+								<button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="saveConfig()">Save Config</button>
 							</span>
 							<span ng-show="success">
 								<div class="alert alert-success">
@@ -235,8 +250,8 @@
 										<div class="form-group">
 											<div class="col-lg-3">
 												<button class="btn btn-sm btn-primary pull-right" ng-hide="route_edit" ng-disabled="newRouteForm.$invalid" ng-click="addRoute(selected_network, route)">Add Route</button>
-												<button class="btn btn-sm btn-primary" ng-show="route_edit" ng-click="cancelRoute()">Cancel</button>
-												<button class="btn btn-sm btn-primary" ng-show="route_edit && route_modified" ng-disabled="newRouteForm.$invalid" ng-click="saveRoute(route)">Save Changes</button>
+												<button class="btn btn-sm btn-primary" ng-show="route_edit" ng-click="cancelRouteChanges()">Cancel</button>
+												<button class="btn btn-sm btn-primary" ng-show="route_edit && route_modified" ng-disabled="newRouteForm.$invalid" ng-click="applyRouteChanges(route)">Apply</button>
 											</div>
 										</div>
 									</form>
