@@ -7,13 +7,17 @@ var express = require('express')
 	, bcrypt = require('bcrypt')
 	, colors = require('colors')
 	, SALT_WORK_FACTOR = 10;
-	
-// mongoose.connect('localhost', 'test');
-// var db = mongoose.connection;
-// db.on('error', console.error.bind(console, 'connection error:'));
-// db.once('open', function callback() {
-// 	console.log('Connected to DB');
-// });
+
+var debug = process.env.DEBUG;	
+
+if (!debug) {
+	mongoose.connect('localhost', 'test');
+	var db = mongoose.connection;
+	db.on('error', console.error.bind(console, 'connection error:'));
+	db.once('open', function callback() {
+		console.log('Connected to DB');
+	});
+}
 
 // First, checks if it isn't implemented yet.
 if (!String.prototype.format) {
@@ -62,19 +66,25 @@ app.configure(function() {
 	app.use('/images', express.static(__dirname + '/images'));
 });
 
-// app.all('*', function(req, res, next) {
-// 	if (/^\/login|\.css$/g.test(req.url)) {
-// 		return next();
-// 	} else if (req.isAuthenticated()) {
-// 		return next();
-// 	} else {
-// 		return res.redirect('/login');
-// 	}
-// });
+if (!debug) {
+	app.all('*', function(req, res, next) {
+		if (/^\/login|\.css$/g.test(req.url)) {
+			return next();
+		} else if (req.isAuthenticated()) {
+			return next();
+		} else {
+			return res.redirect('/login');
+		}
+	});
+}
 
 app.get('/login', function(req, res){
 	res.render('login', { user: req.user, message: req.session.messages });
 });
+
+// app.get('/', function(req, res){
+// 	res.render('home', { page: "home" });
+// });
 
 app.get('/home', function(req, res){
 	res.render('home', { page: "home" });
@@ -128,9 +138,9 @@ app.post('/login', function(req, res, next) {
 	})(req, res, next);
 });
 
-// app.get('/', function(req, res) {
-// 	res.redirect('/home');
-// });
+app.get('/', function(req, res) {
+	res.redirect('/home');
+});
 
 app.get('/logout', function(req, res){
 	req.logout();
@@ -814,17 +824,43 @@ addAdhoc = function(network, cb) {
 }
 
 
-selectNetwork = function(network_id, cb) {
+activateNetwork = function(network, cb) {
 
-	command = 'wpa_cli select_network ' + network_id;
+	command = 'wpa_cli -i' + robotInterface + ' select_network ' + network.id;
 	executeCommand(command, function(err, result) {
 		if (err) {
-			return cb(err, result)
+			return cb(err, result);
 		} else {
 			if (result.match('FAIL')) {
-				return cb("error", "failed to select network " + network_id);
+				return cb("error", "failed to select network " + network.id);
 			} else {
-				return cb(null, null);
+				network.current = true;
+				return cb(null, network);
+			}
+		}
+	});
+
+}
+
+getNetworkStatus = function(cb) {
+	console.log("get network status".yellow);
+
+	command = wpa_cli_cmd + 'status';
+	executeCommand(command, function(err, result) {
+		if (err) {
+			return cb(err, result);
+		} else {
+			if (result.match('FAIL')) {
+				return cb("error", "failed to get network status");
+			} else {
+				var regex = /^(\S+)=(\S+)\n/gm;
+				var match = regex.exec(result);
+				var status = {};
+				while (match != null) {
+					status[match[1]] = match[2];
+					match = regex.exec(result);
+				}
+				return cb(null, status);
 			}
 		}
 	});
@@ -992,17 +1028,25 @@ listNetworks = function(cb) {
 	recursive(cb, 0);
 }
 
-removeNetwork = function(network_id, cb) {
+removeNetwork = function(network, cb) {
 
-	command = wpa_cli_cmd + ' remove_network ' + network_id;
+	command = wpa_cli_cmd + ' remove_network ' + network.id;
 	executeCommand(command, function(err, result) {
 		if (err) {
 			return cb(err, result)
 		} else {
 			if (result == "FAIL") {
-				return cb("error", "failed to remove network");
+				return cb("error", "failed to remove network", network);
 			} else {
-				return cb(null, null);
+				// if removing the element succeeded we also need to
+				// remove the stanza for this network from the interfaces
+				removeNetworkFromInterfaces(network, function(err, result) {
+					if (err) {
+						return cb(err, result);
+					} else {
+						return cb(null, null);
+					}
+				});
 			}
 		}
 	});
@@ -1109,16 +1153,16 @@ app.post('/network_add', function(req, res, next) {
 	}
 });
 
-app.post('/network_select', function(req, res, next) {
+app.post('/network_activate', function(req, res, next) {
 	var network = req.body;
 
-	selectNetwork(network.id, function(err, msg) {
+	activateNetwork(network, function(err, result) {
 		if (err) {
-			console.log("Error:".red, msg);
-			res.send({ success: false, message: msg});
+			console.log("Error:".red, result);
+			res.send({ success: false, message: result});
 		} else {
-			console.log("Network ".green + network.ssid + " selected".green);
-			res.send({ success: true});
+			console.log("Network selected:".green, network);
+			res.send({ success: true, network: result});
 		}
 	});
 });
@@ -1139,7 +1183,7 @@ app.post('/network_list', function(req, res, next) {
 app.post('/network_remove', function(req, res, next) {
 	var network = req.body;
 	
-	removeNetwork(network.id, function(err, result) {
+	removeNetwork(network, function(err, result) {
 		if (err) {
 			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
@@ -1178,16 +1222,15 @@ app.post('/network_saveconfig', function(req, res, next) {
 
 });
 
-app.post('/network_info', function(req, res, next) {
+app.post('/network_status', function(req, res, next) {
 
-	var network = req.body;
-	getNetworkInfo(network.id, function(err, result) {
+	getNetworkStatus(function(err, result) {
 		if (err) {
 			console.log("Error:".red, result);
 			res.send({ success: false, message: result});
 		} else {
-			console.log("Info ok".green);
-			res.send({ success: true, network: result});
+			console.log("Network Info:".green, result);
+			res.send({ success: true, network_status: result});
 		}
 	});
 
@@ -1272,8 +1315,8 @@ loadInterfaces = function(cb) {
 					var route_regex = /.*--dport (\d*).*--to-destination ((?:\d+\.){3}\d+):(\d+)/
 					if ((matches = route_raw.match(route_regex)) != null) {
 						// console.log("matches", matches);
-						var route = { srcPort: matches[1],
-									  dstPort: matches[3],
+						var route = { srcPort: Number(matches[1]),
+									  dstPort: Number(matches[3]),
 									  target: matches[2] };
 						routes.push(route);
 					}
@@ -1310,28 +1353,57 @@ saveInterfaces = function(cb) {
 				var stanza = interfaces[i];
 				var stanza_str = "";
 
-				// if (stanza.type.match(/auto|allow-hotplug/)) {
-				// 	stanza_str = "{0} {1}".format(stanza.type, stanza.name);
-				// } else {
-					stanza_str = "{0} {1} {2}\n".format(stanza.type, stanza.name, stanza.method);
+				stanza_str = "{0} {1} {2}\n".format(stanza.type, stanza.name, stanza.method);
 
-					var stanza_settings_str = "";
-					var stanza_routes_str = "";
+				var stanza_settings_str = "";
+				var stanza_routes_str = "";
 
-					if (stanza.settings.length != 0) {
-						stanza_settings_str = "  " + stanza.settings.toString().replace(/,/g,"\n  ");
-						stanza_str = stanza_str.concat(stanza_settings_str, "\n");
+				if (stanza.settings.length != 0) {
+					stanza_settings_str = "  " + stanza.settings.toString().replace(/,/g,"\n  ");
+					stanza_str = stanza_str.concat(stanza_settings_str, "\n");
+				}
+
+				// the following is a bit of a hack, maybe it could be solved more elegantly
+				// we need to make sure that the routes are flushed from the table, and some
+				// general route settings that apply for any network are written. we add these to the 
+				// iface stanza of the robot interface. and to avoid duplicates, or checking if it is 
+				// complete we write the whole set every time we save the interfaces file and discard 
+				// the old entries
+				if (stanza.type.match("iface") && stanza.name.match(robotInterface)) {
+					if (stanza_settings_str != "") {
+						stanza_str = stanza_str.concat("\n");
 					}
 
-					if (stanza.routes_raw.length != 0) {
-						if (stanza_settings_str != "") {
-							stanza_str = stanza_str.concat("\n");
-						}
+					// TODO: make sure all flush and deletions are neccessary
+										// flush the filter table
+					stanza_routes_str = "  up /sbin/iptables -F\n" + 
+										// delete all user chains from filter table
+										"  up /sbin/iptables -X\n" + 
+										// flush the nat table
+										"  up /sbin/iptables -t nat -F\n" + 
+										// delete all user chains from nat table
+										"  up /sbin/iptables -t nat -X\n" + 
+										// flush the mangle table
+										"  up /sbin/iptables -t mangle -F\n" + 
+										// delete all user chains from mangle table
+										"  up /sbin/iptables -t mangle -X\n" + 
+										// mask all ip packages going out from robot interface with the roborouter's source address
+										"  up iptables -t nat -A POSTROUTING -o " + robotInterface + " -j MASQUERADE\n" + 
+										// mask all ip packages going out from main interface with the roborouter's source address
+										"  up iptables -t nat -A POSTROUTING -o " + mainInterface + " -j MASQUERADE\n" +
+										// allow forwarding of packages
+										"  up sysctl -w net.ipv4.ip_forward=1\n";
+					stanza_str = stanza_str.concat(stanza_routes_str, "\n");
 
-						stanza_routes_str = "  " + stanza.routes_raw.toString().replace(/,/g,"\n  ");
-						stanza_str = stanza_str.concat(stanza_routes_str, "\n");
+				} else if (stanza.routes_raw.length != 0) {
+					if (stanza_settings_str != "") {
+						stanza_str = stanza_str.concat("\n");
 					}
-				// }
+
+					stanza_routes_str = "  " + stanza.routes_raw.toString().replace(/,/g,"\n  ");
+					stanza_str = stanza_str.concat(stanza_routes_str, "\n");
+				}
+
 			
 				interfaces_string = interfaces_string.concat(stanza_str, "\n");
 			}
@@ -1363,17 +1435,6 @@ loadInterfaces(function(error, result) {
 		console.log("interfaces read Successfully:\n".green, interfaces);
 	}
 });
-
-getInterfacesNetwork = function(id_str) {
-	if (id_str != '') {
-		for (var i = 0; i < interfaces.length; ++i) {
-			if (interfaces[i].name == id_str) {
-				return interfaces[i];
-			}
-		}
-	}
-	return null;
-}
 
 app.post('/interfaces', function(req, res, next) {
 
@@ -1510,6 +1571,32 @@ createNewStanza = function(network) {
 
 		return stanza;
 	}
+}
+
+getInterfacesNetwork = function(id_str) {
+	if (id_str != '') {
+		for (var i = 0; i < interfaces.length; ++i) {
+			if (interfaces[i].name == id_str) {
+				return interfaces[i];
+			}
+		}
+	}
+	return null;
+}
+
+removeNetworkFromInterfaces = function(network, cb) {
+	console.log("remove network from interfaces".yellow);
+
+	for (i in interfaces) {
+		if (interfaces[i].name.match(network.id_str)) {
+			// console.log("network found, i:", i);
+			interfacesIsModified = true;
+			// console.log("network removed:", interfaces.splice(i, 1));
+			interfaces.splice(i, 1);
+			return cb(null, null);
+		}
+	}
+	return cb("error", "network not found in interfaces");
 }
 
 addNetworkToInterfaces = function(network, cb) {

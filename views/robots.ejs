@@ -1,6 +1,291 @@
 <div class="bs-docs-section">
 	<div class="page-header">
-		<h1 id="robots">Robots</h1>
-		<p class="lead">Add Robots, Remove Robots, Select Robots.</p>
+		<div ng-controller="RobotsCtrl" ng-init="listNetworks(); getNetworkStatus();" class="tabbable">
+			<h1 id="robots">Robots</h1>
+			<p class="lead">Add here robot networks, select robots, edit robot networks, etc.</p>
+			<ul class="nav nav-tabs" id="robots_tab">
+				<li class="active"><a href="#pane_networks" data-toggle="tab" ng-click="listNetworks()" id="tab_networks">Networks</a></li>
+				<li><a href="#pane_scan" data-toggle="tab" ng-click="scanNetworks()" id="tab_scan">New</a></li>
+				<li><a href="#pane_edit" data-toggle="tab" ng-click="editNetworks()" id="tab_edit">Edit</a></li>
+			</ul>
+			<div class="tab-content">
+				<div class="tab-pane active" id="pane_networks">
+					<div class="panel panel-default">
+						<!-- Default panel contents -->
+						<!-- <div class="panel-heading">Available Networks</div> -->
+						<div class="panel-body">
+							<p>Configured networks:</p>
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-click="listNetworks(true); getNetworkStatus();">Refresh</button>
+								<button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="saveConfig()">Save Config</button>
+							</span>
+							<span ng-show="success">
+								<div class="alert alert-success">
+									Operation succeeded!
+								</div>
+							</span>
+							<span ng-show="failure">
+								<div class="alert alert-danger">
+									Operation failed: {{message}}
+								</div>
+							</span>
+						</div>
+
+						<div class="list-group">
+							<span class="list-group-item" ng-show="loading">
+								<img src="/images/loader.gif" id="loading-indicator" />
+							</span>
+							<span ng-repeat="n in networks">
+								<a class="list-group-item" ng-class="{active: n.current}" href ng-click="activate(n)">
+								{{n.ssid}}
+								</a>
+							</span>
+							<div class="list-group-item" ng-show="networks.length == 0">No networks configured!</div>
+						</div>
+					</div>
+					<pre>networks_status: {{network_status | json}}</pre>
+
+				</div>
+
+				<div class="tab-pane" id="pane_scan">
+					<div class="panel panel-default">
+						<!-- <span ng-hide="editing" class="check-element animate-show"> -->
+						<!-- <div class="panel-heading">Available Networks</div> -->
+						<div class="panel-body">
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-click="scanNetworks()">Refresh</button>
+								<button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="saveConfig()">Save Config</button>
+							</span>
+							<span ng-show="success">
+								<div class="alert alert-success">
+									Operation succeeded!
+								</div>
+							</span>
+							<span ng-show="failure">
+								<div class="alert alert-danger">
+									Operation failed: {{message}}
+								</div>
+							</span>
+						</div>
+
+						<div class="list-group">
+							<span class="list-group-item" ng-show="loading">
+								<img src="/images/loader.gif" id="loading-indicator">
+							</span>
+							<span ng-repeat="n in scan_networks">
+								<a class="list-group-item" href ng-click="select(n)">
+								{{n.ssid}}
+								</a>
+								<span ng-show="n.isSelected" class="animate-show">
+									<form novalidate class="form-horizontal" name="addNetworkForm" id="addForm" role="form">
+										<div class="form-group">
+											<label class="col-lg-3 control-label">SSID:</label>
+											<label class="col-lg-6 text-left">{{n.ssid}}</label>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3 control-label">Security:</label>
+											<label class="col-lg-6 text-left">{{n.security | security_name}}</label>
+										</div>
+										<div class="form-group" ng-show="n.security != 0">
+											<label class="col-lg-3 control-label" for="psk">Passkey:</label>
+											<div class="col-lg-6">
+												<input type="password" id="psk" class="form-control" placeholder="Key" ng-model="n.psk" ng-required="n.security != 0">
+											</div>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3"></label>
+											<label class="checkbox col-lg-6">
+												<input type="checkbox" name="isAdhoc" ng-model="n.isAdhoc"> Ad-Hoc Network
+											</label>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3 control-label" for="identification" title="Identification for the robot's network. No spaces allowed!">Identification:</label>
+											<div class="col-lg-6">
+												<input class="form-control" type="text" name="identification" id="identification" placeholder="robot name" ng-model="n.id_str" ng-pattern="id_str_pattern" required>
+											</div>
+											<div class="text-danger" ng-show="addNetworkForm.identification.$dirty && addNetworkForm.identification.$invalid">
+												<span ng-show="addNetworkForm.identification.$error.required">Identification cannot be left blank</span>
+												<span ng-show="addNetworkForm.identification.$error.pattern">Identification cannot contain spaces</span>
+											</div>
+										</div>
+										<div class="form-group">
+											<div class="col-lg-3">
+												<button class="btn btn-sm btn-primary pull-right" value="Add" ng-click="add(n)" ng-disabled="addNetworkForm.$invalid">Add</button>
+											</div>
+										</div>
+									</form>
+								</span>
+							</span>
+						</div>
+					<!-- </span> -->
+					</div>
+					<!-- <pre>networks: {{scan_networks}}</pre> -->
+				</div>
+
+				<div class="tab-pane" id="pane_edit">
+					<div class="panel panel-default" ng-hide="editing">
+						<!-- Default panel contents -->
+						<!-- <div class="panel-heading">Available Networks</div> -->
+						<div class="panel-body">
+							<p>Select a network to start editing its settings</p>
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-show="config_modified" ng-click="saveConfig()">Save Config</button>
+							</span>
+						</div>
+							
+						<div class="list-group">
+							<span class="list-group-item" ng-show="loading">
+								<img src="/images/loader.gif" id="loading-indicator" />
+							</span>
+							<span ng-repeat="n in networks">
+								<a class="list-group-item" href ng-click="edit(n)">
+									{{n.ssid}}
+									<button type="button" class="close" aria-hidden="true" ng-click="removeNetwork(n)" stop-event="click">&times;</button>
+								</a>
+							</span>
+							<div class="list-group-item" ng-show="networks.length == 0">No networks configured!</div>
+						</div>
+					</div>
+
+					<div class="panel panel-default" ng-show="editing">
+						<div class="panel-body">
+							<h4>
+								Editing network <strong>{{selected_network.ssid}}</strong>
+							</h4>
+							<p>
+								Change here the network's passkey and add/edit routes from the
+							   	RoboRouter to the robot.
+							</p>
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-show="editing" ng-click="cancel()">Close</button>
+								<button class="btn btn-sm btn-primary" ng-show="config_modified && !modified" ng-click="saveConfig()">Save Config</button>
+								<button class="btn btn-sm btn-primary" ng-show="editing && modified" ng-click="undo()">Undo</button>
+								<button class="btn btn-sm btn-primary" ng-show="editing && modified" ng-disabled="generalSettingsForm.$invalid" ng-click="applyNetworkChanges()">Apply</button>
+							</span>
+							<span ng-show="success">
+								<div class="alert alert-success">
+									Operation succeeded!
+								</div>
+							</span>
+							<span ng-show="failure">
+								<div class="alert alert-danger">
+									Operation failed: {{message}}
+								</div>
+							</span>
+						</div>
+						<div class="panel panel-default">
+								<div class="panel-heading">General Settings</div>
+								<span class="panel-body">
+									<form class="form-horizontal" name="generalSettingsForm" id="generalSettingsForm" role="form" novalidate>
+										<div class="form-group">
+											<label class="col-lg-3 control-label" for="identification" title="Identification for the robot's network. No spaces allowed!">Identification:</label>
+											<div class="col-lg-6">
+												<input class="form-control" type="text" name="identification" id="identification" placeholder="robot name" ng-model="selected_network.id_str" ng-change="modified = checkModify(selected_network, old_network, modified)" ng-pattern="id_str_pattern" required>
+											</div>
+											<div class="text-danger" ng-show="generalSettingsForm.identification.$dirty && generalSettingsForm.identification.$invalid">
+												<span ng-show="generalSettingsForm.identification.$error.required">Identification cannot be left blank</span>
+												<span ng-show="generalSettingsForm.identification.$error.pattern">Identification cannot contain spaces</span>
+											</div>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3 control-label">SSID:</label>
+											<div class="col-lg-6">
+												<label class="text-left">{{selected_network.ssid}}</label>
+											</div>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3 control-label">Security:</label>
+											<div class="col-lg-6">
+												<label class="text-left">{{selected_network.security | security_name}}</label>
+											</div>
+										</div>
+										<div class="form-group" ng-show="selected_network.security != 0">
+											<label class="col-lg-3 control-label" for="psk">Passkey:</label>
+											<div class="col-lg-6">
+												<input class="form-control" type="password" id="psk" placeholder="Key" ng-model="selected_network.psk" ng-change="modified = checkModify(selected_network, old_network, modified)">
+											</div>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3"></label>
+											<label class="checkbox col-lg-6">
+												<input type="checkbox" name="isAdhoc" ng-model="selected_network.isAdhoc">
+												Ad-Hoc Network
+											</label>
+										</div>
+									</form>
+								</span>
+								<div class="panel-heading">New Route</div>
+								<span class="panel-body">
+									<form class="form-horizontal" name="newRouteForm" id="newRouteForm" role="form" novalidate>
+										<div class="form-group">
+											<label class="col-lg-3 control-label" for="target" title="Enter here the IP Address of the robot">Target IP</label>
+											<div class="col-lg-6">
+												<input class="form-control" type="text" id="target" name="target" ng-change="route_modified = checkModify(route, old_route, route_modified)" ng-model="route.target" ng-pattern="ip_pattern" required>
+											</div>
+											<div class="text-danger" ng-show="newRouteForm.target.$dirty && newRouteForm.target.$invalid">
+												<span ng-show="newRouteForm.target.$error.required">target cannot be left blank</span>
+												<span ng-show="newRouteForm.target.$error.pattern">target has to be an ip address of type *.*.*.*</span>
+											</div>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3 control-label" for="srcPort" title="Source Port is the port on the RoboRouter which will forward messages to the Destination Port on the robot">Source Port</label>
+											<div class="col-lg-6">
+												<input class="form-control" type="number" id="srcPort" name="srcPort" ng-change="route_modified = checkModify(route, old_route, route_modified)" ng-model="route.srcPort" ng-pattern="port_pattern" required>
+											</div>
+											<div class="text-danger" ng-show="newRouteForm.srcPort.$dirty && newRouteForm.srcPort.$invalid">
+												<span ng-show="newRouteForm.srcPort.$error.required">Source Port cannot be left blank</span>
+												<span ng-show="newRouteForm.srcPort.$error.pattern">Source Port has to be a number</span>
+											</div>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3 control-label" for="dstPort" title="Destination Port is the port used by the robot">Destination Port</label>
+											<div class="col-lg-6">
+												<input class="form-control" type="number" id="dstPort" name="dstPort" ng-change="route_modified = checkModify(route, old_route, route_modified)" ng-model="route.dstPort" ng-pattern="port_pattern" required>
+											</div>
+											<div class="text-danger" ng-show="newRouteForm.dstPort.$dirty && newRouteForm.dstPort.$invalid">
+												<span ng-show="newRouteForm.dstPort.$error.required">Destination Port cannot be left blank</span>
+												<span ng-show="newRouteForm.dstPort.$error.pattern">Destination Port has to be a number</span>
+											</div>
+										</div>
+										<div class="form-group">
+											<div class="col-lg-3">
+												<button class="btn btn-sm btn-primary pull-right" ng-hide="route_edit" ng-disabled="newRouteForm.$invalid" ng-click="addRoute(selected_network, route)">Add Route</button>
+												<button class="btn btn-sm btn-primary" ng-show="route_edit" ng-click="cancelRouteChanges()">Cancel</button>
+												<button class="btn btn-sm btn-primary" ng-show="route_edit && route_modified" ng-disabled="newRouteForm.$invalid" ng-click="applyRouteChanges(route)">Apply</button>
+											</div>
+										</div>
+									</form>
+								</span>
+								<div class="panel-heading">Configured Routes</div>
+								<div class="table-responsive">
+									<table class="table table-bordered table-hover">
+										<thead>
+										    <tr>
+										    	<th width="10%">#</th>
+										    	<th width="25%">Source Port</th>
+										    	<th width="40%">Target</th>
+										    	<th width="25%">Destination Port</th>
+										    </tr>
+										</thead>
+										<tbody>
+										    <tr ng-repeat="r in selected_network.routes" ng-click="editRoute(r)">
+										    	<td>{{$index + 1}}</td>
+										    	<td>{{r.srcPort}}</td>
+										    	<td>{{r.target}}</td>
+										    	<td>{{r.dstPort}}</td>
+										    </tr>
+										</tbody>
+									</table>
+									<div ng-show="!selected_network.routes || selected_network.routes.length == 0">
+										No Routes added
+									</div>
+								</div>
+						</div>
+					</div>
+					<!-- <pre>selected_network: {{selected_network | json}}</pre>
+					<pre>networks: {{networks | json}}</pre> -->
+				</div>
+			</div>
+		</div>
 	</div>
 </div>

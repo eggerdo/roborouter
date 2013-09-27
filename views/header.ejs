@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="roborouter">
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" ng-app="roborouter">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -13,7 +13,8 @@
     <link href="libs/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="libs/css/navbar-fixed-top.css" rel="stylesheet">
+    <!-- <link href="libs/css/navbar-fixed-top.css" rel="stylesheet"> -->
+    <link href="libs/css/roborouter.css" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -47,7 +48,7 @@
                 <a href="/settings">Settings</a>
               </li>
               <li <% if (page=="contact") { %> class="active"<% } %> >
-                <a href="/contact">Contact</a>
+                <a href="/">Contact</a>
               </li>
               <!-- <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
@@ -62,6 +63,10 @@
                 </ul>
               </li> -->
             </ul>
+            <ul class="nav navbar-nav alert alert-danger settings-alert" ng-show="config_modified">
+              <!-- The <a href="/settings#robots" class="alert-link">robot settings</a> were modified. Don't forget to save your changes or they will be lost upon restart! -->
+              The <a href ng-click="config_modified = false" class="alert-link">robot settings</a> were modified. Don't forget to save your changes or they will be lost upon restart!
+            </ul>
             <ul class="nav navbar-nav navbar-right">
               <li><a href="/logout">Logout</a></li>
               <!-- <li><a href="../navbar-static-top/">Static top</a></li>
@@ -71,4 +76,4 @@
         </div>
       </div>
 
-      <div class="container">
+      <div class="container bs-docs-continer">

@@ -12,17 +12,21 @@ iface eth0:1 inet static
   address 192.168.0.1
   netmask 255.255.255.0
 
-auto wlan0 
+auto wlan1 
 
-iface wlan0 inet manual
+iface wlan1 inet manual
   wpa-roam /etc/wpa_supplicant/wpa_roam.conf
 
   up /sbin/iptables -F
   up /sbin/iptables -X
   up /sbin/iptables -t nat -F
-  up iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
+  up /sbin/iptables -t nat -X
+  up /sbin/iptables -t mangle -F
+  up /sbin/iptables -t mangle -X
+  up iptables -t nat -A POSTROUTING -o wlan1 -j MASQUERADE
   up iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
   up sysctl -w net.ipv4.ip_forward=1
+
 
 iface default inet dhcp
 
@@ -44,4 +48,6 @@ iface spytank inet dhcp
 
 iface yarpi inet dhcp
   up iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 5000 -j DNAT --to-destination 192.168.1.1:80
+
+iface almende inet dhcp
 

@@ -1,10 +1,3 @@
-var count = 1;
-function scan() {
-	var internet_item = '<a href="#' + count + '" class="list-group-item">Item ' + count + '</a>';
-	$('#internet_list').append(internet_item);
-	count++;
-}
-
 var myApp = angular.module('roborouter', []);
 
 myApp.filter('security_name', function() {
@@ -17,47 +10,27 @@ myApp.filter('security_name', function() {
 	};
 });
 
-myApp.directive('stopEvent', function () {
-	return {
-		restrict: 'A',
-		link: function (scope, element, attr) {
-			element.bind(attr.stopEvent, function (e) {
-				e.stopPropagation();
-			});
-		}
-	};
-});
-
 var OPEN 	= 0;
 	WEP 	= 1;
 	WPA 	= 2;
 
-// setPristine = function(form){
-// 	if(form.$setPristine){//only supported from v1.1.x
-// 		form.$setPristine();
-// 	}else{
-// 		for (var i in form) {
-// 			var input = form[i];
-// 			if (input.$dirty) {
-// 				input.$dirty = false;
-// 			}
-// 		}
-// 	 }
-//  };
-
-function InternetCtrl($scope, $http) {
+// TODO: the #rootScope.config_modified get's reset everytime this
+// function is called. why??? it only happens if we move back to
+// the settings. it works as desired when moving away from the settings.
+function RobotsCtrl($scope, $http, $rootScope) {
 	$scope.success = false;
 	$scope.failure = false;
 	$scope.modified = false;
 	$scope.networks = [];
 	$scope.scan_networks = [];
 	$scope.selected_network = {};
+	$scope.network_status = {};
 	$scope.editing = false;
 	$scope.loading = false;
 	$scope.route_edit = false;
 	$scope.route_modified = false;
 	$scope.settings_valid = false;
-	$scope.config_modified = false;
+	// $rootScope.config_modified = false;
 
 	$scope.id_str_pattern = /^\S+$/;
 	$scope.ip_pattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
@@ -145,9 +118,9 @@ function InternetCtrl($scope, $http) {
 				var network = response.network;
 				$scope.success = true;
 				$scope.networks.push(network);
-				$scope.edit(network);
 				$('#tab_edit').click();	
-				$scope.config_modified = true;
+				$scope.edit(network);
+				$rootScope.config_modified = true;
 			} else {
 				$scope.success = false;
 			}
@@ -157,10 +130,14 @@ function InternetCtrl($scope, $http) {
 	$scope.removeNetwork = function(item) {
 		console.log("remove network: " + item);
 		$scope.reset();
+		item.isRemoved = true;
 
 		$http.post('/network_remove', item).success(function(response) {
 			if (response.success) {
 				$scope.success = true;
+				$rootScope.config_modified = true;
+				$scope.listNetworks();
+				console.log("network removed");
 			} else {
 				$scope.success = false;
 			}
@@ -189,6 +166,26 @@ function InternetCtrl($scope, $http) {
 		});
 	}
 
+	$scope.getNetworkStatus = function() {
+		console.log("get network info...");
+		$scope.reset();
+
+		$http.post('/network_status').success(function(response) {
+			if (response.success) {
+				$scope.network_status = response.network_status;
+			}
+		});
+	}
+
+	// $scope.findCurrentNetwork = function() {
+	// 	for (i in $scope.networks) {
+	// 		if (networks[i].current) {
+	// 			$scope.current_network = networks[i];
+	// 		}
+	// 	}
+	// 	$scope.current_network = {};
+	// }
+
 	$scope.select = function(item) {
 		console.log("select", item);
 		if ($scope.selected_network != item) {
@@ -202,6 +199,34 @@ function InternetCtrl($scope, $http) {
 
 	}
 
+	$scope.activate = function(item) {
+		console.log("activating network", item);
+		$scope.reset();
+
+		$http.post('/network_activate', item).success(function(response) {
+			if (response.success) {
+				$scope.success = true;
+
+				for (i in $scope.networks) {
+					$scope.networks[i].current = false;
+				}
+
+				angular.copy(response.network, item);
+
+				var intervalID = setInterval(function() {
+					$scope.getNetworkStatus();
+					if ($scope.getNetworkStatus["wpa_state"].match("COMPLETED")) {
+						clearInterval(intervalID);
+					}
+				}, 500);
+				
+			} else {
+				$scope.failure = true;
+				$scope.message = response.message;
+			}
+		});		
+	}
+
 	$scope.saveConfig = function() {
 		console.log("saving config...");
 		$scope.reset();
@@ -210,7 +235,7 @@ function InternetCtrl($scope, $http) {
 		$http.post('/network_saveconfig').success(function(response) {
 			if (response.success) {
 				$scope.success = true;
-				$scope.config_modified = false;
+				$rootScope.config_modified = false;
 			} else {
 				$scope.failure = true;
 				$scope.message = response.message;
@@ -226,6 +251,14 @@ function InternetCtrl($scope, $http) {
 	}
 
 	$scope.edit = function(item) {
+		if (item.isRemoved) {
+			// this is a bit of a hack. because the remove button is on the list-group-item which is linked
+			// to the edit function, the edit function also gets called when removing the element. to avoid this
+			// we set the isRemoved flag on the element when removing it so that the edit function gets thrown
+			// out again
+			return;
+		}
+
 		console.log("edit...");
 
 		if (!item.routes) {
@@ -246,38 +279,30 @@ function InternetCtrl($scope, $http) {
 	$scope.undo = function() {
 		$scope.reset();
 
-		$scope.selected_network = $scope.old_network;
+		$scope.selected_network = angular.copy($scope.old_network);
 		$scope.modified = false;
 		$scope.generalSettingsForm.$setPristine();
 	}
 
-	$scope.checkModify = function() {
-		if (!angular.equals($scope.selected_network, $scope.old_network)) {
-			$scope.modified = true;
+	$scope.checkModify = function(new_item, old_item, flag) {
+		console.log("check modifiy ...");
+		if (!angular.equals(new_item, old_item)) {
+			console.log("... true");
+			return true;
 		}
+		return flag;
 	}
 
 	$scope.applyNetworkChanges = function() {
-		// $scope.generalSettingsForm.$setPristine();
+		$scope.generalSettingsForm.$setPristine();
 
 		$scope.reset();
-		// $('#generalSettingsForm .form-group').removeClass('has-error');
-
-		// if (!$scope.selected_network.id_str || $scope.selected_network.id_str == "") {
-		// 	$('#identification').closest('.form-group').addClass('has-error');
-		// 	$scope.failure = true;
-		// 	$scope.message = 'Identification required!';
-		// 	return;
-		// }
-
 
 		$http.post('/network_edit', $scope.selected_network).success(function(response) {
 			if (response.success) {
 				angular.copy($scope.selected_network, $scope.old_network);
-				// $scope.success = true;
 				$scope.modified = false;
-				$scope.config_modified = true;
-				// $scope.saveConfig();
+				$rootScope.config_modified = true;
 			} else {
 				$scope.failure = true;
 				$scope.message = response.message;
@@ -286,39 +311,7 @@ function InternetCtrl($scope, $http) {
 	}
 
 	$scope.addRoute = function(network, route) {
-		console.log("addRoute");
-
-		// $scope.reset();
-		// $('#newRouteForm .form-group').removeClass('has-error');
-
-		// if (!route) {
-		// 	console.log("route undefined");
-		// 	$('#newRouteForm .form-group').addClass('has-error');
-		// 	$scope.failure = true;
-		// 	$scope.message = 'Input Required!';
-		// 	return;
-		// }
-		console.log("srcPort", route.srcPort, "dstPort", route.dstPort, "target", route.target)
-
-		// var check_ok = true;
-		// if (!route.srcPort) {
-		// 	$('#srcPort').closest('.form-group').addClass('has-error');
-		// 	check_ok = false;
-		// }
-		// if (!route.dstPort) {
-		// 	$('#dstPort').closest('.form-group').addClass('has-error');
-		// 	check_ok = false;
-		// }
-		// if (!route.target) {
-		// 	$('#target').closest('.form-group').addClass('has-error');
-		// 	check_ok = false;
-		// }
-
-		// if(!check_ok) {
-		// 	$scope.failure = true;
-		// 	$scope.message = 'One or more fields are missing!';
-		// 	return;
-		// }
+		console.log("addRoute: srcPort", route.srcPort, "dstPort", route.dstPort, "target", route.target)
 
 		network.routes.push(angular.copy(route));
 		$scope.route = {};
@@ -340,18 +333,16 @@ function InternetCtrl($scope, $http) {
 		$scope.route_edit = false;
 		$scope.route_modified = false;
 		$scope.route = {};
+
+		$scope.newRouteForm.$setPristine();
 	}
 
 	$scope.cancelRouteChanges = function() {
 		$scope.route = {};
 		$scope.route_edit = false;
 		$scope.route_modified = false;
-	}
 
-	$scope.checkModifyRoute = function() {
-		if (!angular.equals($scope.route, $scope.old_route)) {
-			$scope.route_modified = true;
-		}
+		$scope.newRouteForm.$setPristine();
 	}
 
 };

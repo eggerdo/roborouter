@@ -27,6 +27,12 @@ body {
   padding-right: 15px;
 }
 
+.settings-alert {
+  margin-bottom: -1px;
+  padding: 14px;
+  /*padding-top: 50px;*/
+}
+
 /*
  * Side navigation
  *
