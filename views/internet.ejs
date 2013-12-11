@@ -1,0 +1,223 @@
+<div class="bs-docs-section">
+	<div class="page-header">
+		<div ng-controller="InternetCtrl" ng-init="listNetworks()" class="tabbable">
+			<h1 id="internet">Internet</h1>
+			<p class="lead">Change here the settings of your internet connection.</p>
+			<ul class="nav nav-tabs" id="tab">
+				<li class="active"><a href="#pane_networks" data-toggle="tab" ng-click="listNetworks()" id="tab_networks">Networks</a></li>
+				<li><a href="#pane_scan" data-toggle="tab" ng-click="scanNetworks()" id="tab_scan">New</a></li>
+				<li><a href="#pane_edit" data-toggle="tab" ng-click="reset()" id="tab_edit">Edit</a></li>
+			</ul>
+			<div class="tab-content">
+				<div class="tab-pane active" id="pane_networks">
+					<div class="panel panel-default">
+						<!-- Default panel contents -->
+						<!-- <div class="panel-heading">Available Networks</div> -->
+						<div class="panel-body">
+							<p>Configured networks:</p>
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-click="listNetworks(true)">Refresh</button>
+							</span>
+							<span ng-show="success">
+								<div class="alert alert-success">
+									Operation succeeded!
+								</div>
+							</span>
+							<span ng-show="failure">
+								<div class="alert alert-danger">
+									Operation failed!
+								</div>
+							</span>
+						</div>
+
+						<div class="list-group">
+							<span class="list-group-item" ng-show="loading">
+								<img src="/images/loader.gif" id="loading-indicator" />
+							</span>
+							<span ng-repeat="n in networks">
+								<a class="list-group-item" href ng-click="activate(n)">
+								{{n.ssid}}
+								</a>
+							</span>
+							<div class="list-group-item" ng-show="networks.length == 0">No networks configured!</div>
+						</div>
+					</div>
+					<pre>networks: {{networks | json}}</pre>
+
+				</div>
+
+				<div class="tab-pane" id="pane_scan">
+					<div class="panel panel-default">
+						<!-- <span ng-hide="editing" class="check-element animate-show"> -->
+						<!-- <div class="panel-heading">Available Networks</div> -->
+						<div class="panel-body">
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-click="scanNetworks()">Scan Networks</button>
+								<button class="btn btn-sm btn-primary" ng-click="clear()">Clear</button>
+							</span>
+							<span ng-show="success">
+								<div class="alert alert-success">
+									Operation succeeded!
+								</div>
+							</span>
+							<span ng-show="failure">
+								<div class="alert alert-danger">
+									Operation failed!
+								</div>
+							</span>
+						</div>
+
+						<div class="list-group">
+							<span class="list-group-item" ng-show="loading">
+								<img src="/images/loader.gif" id="loading-indicator">
+							</span>
+							<span ng-repeat="n in scan_networks">
+								<a class="list-group-item" href ng-click="select(n)">
+								{{n.ssid}}
+								</a>
+								<span ng-show="n.isSelected" class="animate-show">
+									<form class="form-horizontal" id="addForm" role="form">
+										<div class="form-group">
+											<label class="col-lg-3 control-label">SSID:</label>
+											<label class="col-lg-6 text-left">{{n.ssid}}</label>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3 control-label">Security:</label>
+											<label class="col-lg-6 text-left">{{n.security | security_name}}</label>
+										</div>
+										<div class="form-group" ng-show="n.security != 0">
+											<label class="col-lg-3 control-label" for="psk">Passkey:</label>
+											<div class="col-lg-6">
+												<input type="password" id="psk" class="form-control" placeholder="Key" ng-model="n.psk">
+											</div>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-3"></label>
+											<label class="checkbox col-lg-6">
+												<input type="checkbox" name="isAdhoc" ng-model="n.isAdhoc"> Ad-Hoc Network
+											</label>
+										</div>
+										<div class="form-group">
+											<div class="col-lg-3">
+												<button class="btn btn-lg btn-primary pull-right" ng-click="add(n)">Add</button>
+											</div>
+										</div>
+									</form>
+								</span>
+							</span>
+						</div>
+					<!-- </span> -->
+					</div>
+					<pre>networks: {{scan_networks}}</pre>
+				</div>
+
+				<div class="tab-pane" id="pane_edit">
+					<div class="panel panel-default">
+						<!-- Default panel contents -->
+						<!-- <div class="panel-heading">Available Networks</div> -->
+						<div class="panel-body">
+							<p>Edit networks:</p>
+							<span class="span8">
+								<button class="btn btn-sm btn-primary" ng-show="editing" ng-click="cancel()">Cancel</button>
+								<button class="btn btn-sm btn-primary" ng-show="editing && modified" ng-click="undo()">Save Changes</button>
+								<button class="btn btn-sm btn-primary" ng-show="editing && modified" ng-click="save()">Save Changes</button>
+							</span>
+							<span ng-show="success">
+								<div class="alert alert-success">
+									Operation succeeded!
+								</div>
+							</span>
+							<span ng-show="failure">
+								<div class="alert alert-danger">
+									Operation failed!
+								</div>
+							</span>
+						</div>
+
+						<div ng-hide="editing" class="list-group">
+							<span class="list-group-item" ng-show="loading">
+								<img src="/images/loader.gif" id="loading-indicator" />
+							</span>
+							<span ng-repeat="n in networks">
+								<a class="list-group-item" href ng-click="edit(n)">
+								{{n.ssid}}
+								</a>
+							</span>
+							<div class="list-group-item" ng-show="networks.length == 0">No networks configured!</div>
+						</div>
+						<div class="panel panel-default" ng-show="editing">
+							<div class="panel-heading">General Settings</div>
+							<span class="panel-body">
+								<div class="row">
+									<label class="col-lg-3">Identification:</label>
+									<input type="text" id="identification" placeholder="robot name" ng-model="selected_network.id" ng-change="checkModify()">
+								</div>
+								<div class="row">
+									<label class="col-lg-3">SSID:</label>
+									<label class="col-lg-6 text-left">{{selected_network.ssid}}</label>
+								</div>
+								<div class="row">
+									<label class="col-lg-3">Security:</label>
+									<label class="col-lg-6 text-left">{{selected_network.security | security_name}}</label>
+								</div>
+								<div class="row" ng-show="n.security != 0">
+									<label class="col-lg-3" for="psk">Passkey:</label>
+									<div class="col-lg-6">
+										<input type="password" id="psk" placeholder="Key" ng-model="selected_network.psk" ng-change="checkModify()">
+									</div>
+								</div>
+								<div class="row">
+									<label class="col-lg-3"></label>
+									<label class="checkbox col-lg-6">
+										<input type="checkbox" name="isAdhoc" ng-model="selected_network.isAdhoc"> Ad-Hoc Network
+									</label>
+								</div>
+							</span>
+							<div class="panel-heading">New Route</div>
+							<span class="panel-body">
+								<div class="row">
+									<label class="col-lg-3 control-label" for="address">IP Address</label>
+									<input class="col-lg-6" type="number" name="address" ng-model="route.address">
+								</div>
+								<div class="row">
+									<label class="col-lg-3 control-label" for="incomingPort">Incoming Port</label>
+									<input class="col-lg-6" type="number" name="incomingPort" ng-model="route.in">
+								</div>
+								<div class="row">
+									<label class="col-lg-3 control-label" for="targetPort">Target Port</label>
+									<input class="col-lg-6" type="number" name="targetPort" ng-model="route.target">
+								</div>
+								<div class="row">
+									<div class="col-lg-3">
+										<button class="btn btn-lg btn-primary pull-right" ng-click="addRoute(route)">Add Route</button>
+									</div>
+								</div>
+
+							</span>
+							<div class="panel-heading">Configured Routes</div>
+							<div class="table-responsive">
+								<table class="table table-bordered">
+								    <tr>
+								    	<th>#</th>
+								    	<th>Incoming Port</th>
+								    	<th>Target Port</th>
+								    </tr>
+								    <tr ng-repeat="r in selected_network.routes">
+								    	<th>{{$index}}</th>
+								    	<th>r.in</th>
+								    	<th>r.target</th>
+								    </tr>
+								</table>
+								<div ng-show="!selected_network.routes || selected_network.routes.length == 0">
+									No Routes added
+								</div>
+							</div>
+						</div>
+					</div>
+					<pre>networks: {{networks | json}}</pre>
+
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
